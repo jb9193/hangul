@@ -135,14 +135,27 @@
   .card .word { font-size: 1.5rem; font-weight: 800; display: block; margin-top: 0.2rem; }
   /* 낱말 카드: 그림 없이 낱말만, 높이와 줄간격을 똑같이 맞춘다 */
   .word-card {
-    display: flex; align-items: center; justify-content: center;
-    min-height: 5.5rem; padding: 0.8rem 0.6rem;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.3rem; min-height: 5.5rem; padding: 0.8rem 0.6rem;
   }
   .word-card .word {
     margin: 0; line-height: 1.35;
     word-break: keep-all; overflow-wrap: anywhere;
   }
   .word-card .word.long { font-size: 1.2rem; }
+  /* 누르면 소리가 난다는 표시 */
+  .word-card .spk { font-size: 1rem; line-height: 1; opacity: 0.45; }
+  .word-card.playing {
+    background: var(--accent-soft); border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow);
+  }
+  .word-card.playing .spk { opacity: 1; }
+  .detail .wordbig {
+    font-size: 2.1rem; font-weight: 900; line-height: 1.25;
+    word-break: keep-all; overflow-wrap: anywhere;
+  }
+  /* 다시 듣기 단추는 한 줄을 다 차지해 누르기 쉽게 */
+  #wordDetail #wdSpeak { flex: 1 1 100%; text-align: center; }
 
   .detail {
     position: sticky; bottom: 0.8rem; margin-top: 1.2rem;
@@ -286,9 +299,11 @@
     .detail .name { font-size: 1.2rem; }
     .stroke-gif { width: 170px; max-width: 100%; }
     .card .big { font-size: 2rem; }
-    .word-card { min-height: 4.8rem; }
+    .word-card { min-height: 4.8rem; gap: 0.2rem; }
     .word-card .word { font-size: 1.3rem; }
     .word-card .word.long { font-size: 1.05rem; }
+    .word-card .spk { font-size: 0.85rem; }
+    .detail .wordbig { font-size: 1.7rem; }
   }
   @media (prefers-reduced-motion: no-preference) {
     .screen.active { animation: fadein 0.25s ease; }
@@ -467,6 +482,13 @@
       <button class="nav-btn" id="wpPrev">◀ 이전 쪽</button>
       <span class="lesson-progress" style="margin:0; align-self:center" id="wpInfo"></span>
       <button class="nav-btn" id="wpNext">다음 쪽 ▶</button>
+    </div>
+    <div class="detail" id="wordDetail">
+      <span class="wordbig" id="wdWord"></span>
+      <span class="info">
+        <p class="ex" id="wdCat"></p>
+      </span>
+      <button class="speak-btn" id="wdSpeak">🔊 다시 듣기</button>
     </div>
   </section>
 
@@ -987,10 +1009,24 @@
   const cats = Object.keys(WORDS);
   const TOTAL_WORDS = cats.reduce((n, c) => n + WORDS[c].length, 0);
   document.getElementById('wordsHint').textContent =
-    '낱말을 누르면 소리 내어 읽어 드립니다. (모두 ' + TOTAL_WORDS + '개)';
+    '낱말을 누르면 🔊 소리 내어 읽어 드립니다. (모두 ' + TOTAL_WORDS + '개)';
 
   const PAGE_SIZE = 12;
-  let curCat = cats[0], curPage = 0;
+  let curCat = cats[0], curPage = 0, curWord = null;
+  const wordDetail = document.getElementById('wordDetail');
+
+  // 낱말 하나를 읽어 주고, 아래 칸에 크게 보여 준다 (다시 듣기용)
+  function playWord(word, btn) {
+    curWord = word;
+    wordGrid.querySelectorAll('.word-card').forEach(c => c.classList.toggle('playing', c === btn));
+    document.getElementById('wdWord').textContent = word;
+    document.getElementById('wdCat').textContent = curCat;
+    wordDetail.classList.add('show');
+    say(['w_' + word], word);
+  }
+  document.getElementById('wdSpeak').addEventListener('click', () => {
+    if (curWord) say(['w_' + curWord], curWord);
+  });
 
   function renderWords(cat, page) {
     curCat = cat;
@@ -998,11 +1034,14 @@
     const pages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
     curPage = Math.min(Math.max(page || 0, 0), pages - 1);
     wordGrid.innerHTML = '';
+    wordDetail.classList.remove('show');
+    curWord = null;
     items.slice(curPage * PAGE_SIZE, curPage * PAGE_SIZE + PAGE_SIZE).forEach(([word]) => {
       const b = document.createElement('button');
       b.className = 'card word-card';
-      b.innerHTML = '<span class="word' + (word.length >= 6 ? ' long' : '') + '">' + word + '</span>';
-      b.addEventListener('click', () => say(['w_' + word], word));
+      b.innerHTML = '<span class="word' + (word.length >= 6 ? ' long' : '') + '">' + word +
+                    '</span><span class="spk">🔊</span>';
+      b.addEventListener('click', () => playWord(word, b));
       wordGrid.appendChild(b);
     });
     document.getElementById('wpInfo').textContent = (curPage + 1) + ' / ' + pages + ' 쪽';
