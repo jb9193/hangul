@@ -161,10 +161,15 @@
 
   /* 인터넷 없이 쓰기 안내 칸 */
   .offline-card {
-    margin-top: 1.4rem; padding: 1rem 1.1rem;
-    background: var(--card); border: 1px solid var(--line);
+    margin-bottom: 1.2rem; padding: 1rem 1.1rem;
+    background: var(--card); border: 3px solid var(--accent);
     border-radius: 18px; box-shadow: var(--shadow);
   }
+  /* 다 받고 나면 조용한 확인 칸으로 */
+  .offline-card.oc-done {
+    border: 1px solid var(--line); padding: 0.75rem 1rem;
+  }
+  .oc-done .oc-desc { margin-bottom: 0; }
   .oc-title { font-size: 1.15rem; font-weight: 800; margin: 0 0 0.35rem; }
   .oc-desc { font-size: 0.95rem; color: var(--sub); margin: 0 0 0.85rem; line-height: 1.5; }
   .oc-bar {
@@ -346,6 +351,13 @@
       <p><strong>어서 오세요!</strong> 천천히, 큰 글자로 한글을 함께 배워요.<br>
       단추를 누르면 <strong>고운 목소리</strong>가 읽어 드립니다. 🔊</p>
     </div>
+    <div class="offline-card" id="offlineCard" hidden>
+      <p class="oc-title" id="ocTitle">📥 인터넷 없이 쓰기</p>
+      <p class="oc-desc" id="ocDesc">소리를 미리 받아 두면 인터넷이 없는 곳에서도 쓸 수 있어요.<br>약 10MB · 와이파이에서 받으시길 권합니다.</p>
+      <div class="oc-bar" id="ocBar" hidden><span class="oc-fill" id="ocFill"></span></div>
+      <button class="nav-btn primary" id="ocBtn">소리 모두 받기</button>
+      <button class="nav-btn" id="ocInstall" hidden>📱 앱으로 설치하기</button>
+    </div>
     <div class="menu">
       <button class="menu-btn" data-go="basics">
         <span class="icon">🌱</span>
@@ -382,13 +394,6 @@
           <span class="desc">그림과 소리를 듣고 알맞은 낱말을 골라요</span>
         </span>
       </button>
-    </div>
-    <div class="offline-card" id="offlineCard" hidden>
-      <p class="oc-title" id="ocTitle">📥 인터넷 없이 쓰기</p>
-      <p class="oc-desc" id="ocDesc">소리를 미리 받아 두면 인터넷이 없는 곳에서도 쓸 수 있어요.<br>약 10MB · 와이파이에서 받으시길 권합니다.</p>
-      <div class="oc-bar" id="ocBar" hidden><span class="oc-fill" id="ocFill"></span></div>
-      <button class="nav-btn primary" id="ocBtn">소리 모두 받기</button>
-      <button class="nav-btn" id="ocInstall" hidden>📱 앱으로 설치하기</button>
     </div>
   </section>
 
@@ -1230,7 +1235,9 @@
     function setDone() {
       card.classList.add('oc-done');
       title.textContent = '\u2705 인터넷 없이 쓸 수 있어요';
-      desc.innerHTML = '소리를 모두 받아 두었습니다. 이제 인터넷이 없어도 쓸 수 있어요.<br>홈 화면에 추가해 두시면 앱처럼 바로 열립니다.';
+      desc.innerHTML = standalone
+        ? '소리를 모두 받아 두었습니다. 이제 인터넷이 없어도 쓸 수 있어요.'
+        : '소리를 모두 받아 두었습니다.<br>홈 화면에 추가하신 뒤에는, <b>앱에서 한 번 더</b> 받아 주세요.';
       bar.hidden = true;
       btn.hidden = true;
     }
@@ -1241,12 +1248,26 @@
       btn.textContent = '받는 중… ' + pct + '%';
     }
 
+    // 홈 화면 앱으로 열었는지
+    var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+                     || window.navigator.standalone === true;
+
+    function needDownload() {
+      if (!standalone) return;
+      // 아이폰은 앱과 사파리의 저장 공간이 달라서 앱에서 다시 받아야 한다
+      title.textContent = '📥 먼저 소리를 받아 주세요';
+      desc.innerHTML = '이 앱에는 소리가 아직 저장되지 않았습니다.<br>' +
+        '아래 단추를 한 번 눌러 두시면 <b>인터넷이 없어도</b> 쓸 수 있습니다. (약 10MB)';
+    }
+
     function checkAlreadyDone() {
       var total = getUrls().length;
-      if (!window.caches || !total) return;
+      if (!window.caches || !total) { needDownload(); return; }
       caches.open(AUDIO_CACHE).then(function (c) { return c.keys(); })
-        .then(function (keys) { if (keys.length >= total) setDone(); })
-        .catch(function () {});
+        .then(function (keys) {
+          if (keys.length >= total) setDone(); else needDownload();
+        })
+        .catch(function () { needDownload(); });
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', checkAlreadyDone);

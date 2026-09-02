@@ -1,5 +1,5 @@
 /* 우리 한글 교실 — 오프라인 서비스 워커
-   빌드 때 8db7df47c6 이 실제 값으로 바뀝니다.
+   빌드 때 b445284085 이 실제 값으로 바뀝니다.
 
    - 화면(index.html 등)은 인터넷이 되면 새것을 먼저 받고, 안 되면 저장해 둔 것을 씁니다.
    - 소리 파일은 이름이 내용에 따라 정해지므로(내용이 같으면 이름도 같음)
@@ -7,7 +7,7 @@
 */
 'use strict';
 
-var SHELL = 'hangul-shell-8db7df47c6';
+var SHELL = 'hangul-shell-b445284085';
 var AUDIO = 'hangul-audio';                 // 판이 바뀌어도 그대로 둔다
 var KEEP = [SHELL, AUDIO];
 
